@@ -8,7 +8,7 @@ import { logActivity } from "./activityService"
 
 export const REQUEST_STATUSES = [
   "submitted", "verified", "matched", "partially_matched", "unmatched",
-  "approved", "in_transit", "delivered", "fulfilled", "rejected", "cancelled"
+  "approved", "preparing", "ready_for_pickup", "dispatched", "in_transit", "delivered", "fulfilled", "rejected", "cancelled"
 ]
 
 // ─── CRUD ─────────────────────────────────────────────────────
@@ -46,6 +46,26 @@ export const rejectRequest = async (requestId, reason, actorUid) => {
 export const updateRequestStatus = async (requestId, status, extra = {}, actorUid = null) => {
   await patchDoc("requests", requestId, { status, ...extra })
   await logActivity(`request_${status}`, `Request ${requestId} → ${status}`, "info", requestId, actorUid)
+}
+
+export const acceptRequest = async (requestId, actorUid) => {
+  await patchDoc("requests", requestId, { status: "preparing" })
+  await logActivity("request_accepted", `Request ${requestId} accepted and preparing`, "info", requestId, actorUid)
+}
+
+export const markReadyForPickup = async (requestId, actorUid) => {
+  await patchDoc("requests", requestId, { status: "ready_for_pickup" })
+  await logActivity("request_ready", `Request ${requestId} ready for pickup`, "success", requestId, actorUid)
+}
+
+export const verifyPickup = async (requestId, actorUid) => {
+  await patchDoc("requests", requestId, { status: "in_transit" }) // merging dispatched and in_transit for simplicity
+  await logActivity("request_dispatched", `Request ${requestId} picked up and in transit`, "info", requestId, actorUid)
+}
+
+export const completeDelivery = async (requestId, actorUid) => {
+  await patchDoc("requests", requestId, { status: "delivered" })
+  await logActivity("request_delivered", `Request ${requestId} delivered`, "success", requestId, actorUid)
 }
 
 export const updateRequestMatched = async (requestId, qtyMatched, status) => {

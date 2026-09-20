@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Sidebar } from '../common/Sidebar'
 import { Header } from '../common/Header'
 import { useAuth } from '../../context/AuthContext'
-import { listenToRequests, submitRequest, verifyRequest, rejectRequest } from '../../services/requestService'
+import { listenToRequests, submitRequest, verifyRequest, rejectRequest, acceptRequest, markReadyForPickup } from '../../services/requestService'
 import { listenToCamps } from '../../services/campService'
 import { canWrite } from '../../services/adminService'
 
@@ -15,6 +15,7 @@ export const Requests = () => {
   const [rejectModal, setRejectModal] = useState(null)
   const [rejectReason, setRejectReason] = useState("")
   const [submitting, setSubmitting] = useState(false)
+  const [showQRModal, setShowQRModal] = useState(null) // ID of request for QR
 
   const [form, setForm] = useState({
     itemKey: "water",
@@ -38,6 +39,7 @@ export const Requests = () => {
 
   const canSubmit = userRole === "incharge"
   const canVerify = userRole === "admin1"
+  const canProcess = userRole === "admin2"
   const isReadOnly = !canWrite(userRole, "/admin/requests")
 
   // Filter by chip
@@ -72,11 +74,15 @@ export const Requests = () => {
   }
 
   const handleVerify = async (id) => {
-    try {
-      await verifyRequest(id, currentUser?.uid)
-    } catch (e) {
-      alert("Verify failed: " + e.message)
-    }
+    try { await verifyRequest(id, currentUser?.uid) } catch (e) { alert("Verify failed: " + e.message) }
+  }
+
+  const handleProcess = async (id) => {
+    try { await acceptRequest(id, currentUser?.uid) } catch (e) { alert("Accept failed: " + e.message) }
+  }
+
+  const handleMarkReady = async (id) => {
+    try { await markReadyForPickup(id, currentUser?.uid) } catch (e) { alert("Failed: " + e.message) }
   }
 
   const handleReject = async () => {
@@ -247,6 +253,32 @@ export const Requests = () => {
                     </button>
                   </div>
                 )}
+
+                {/* Admin2 (Supply Manager) Actions */}
+                {canProcess && r.status === "submitted" && (
+                  <div className="mt-3 pt-3 border-t border-[#E7DED2] flex items-center gap-2">
+                    <button onClick={() => handleProcess(r.id)}
+                      className="bg-[#001d36] text-white px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-[#17324d] transition-colors cursor-pointer flex items-center gap-1">
+                      <span className="material-symbols-outlined text-sm">check_circle</span> Confirm / Process
+                    </button>
+                  </div>
+                )}
+                {canProcess && r.status === "preparing" && (
+                  <div className="mt-3 pt-3 border-t border-[#E7DED2] flex items-center gap-2">
+                    <button onClick={() => handleMarkReady(r.id)}
+                      className="bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-green-700 transition-colors cursor-pointer flex items-center gap-1">
+                      <span className="material-symbols-outlined text-sm">inventory_2</span> Mark Ready for Pickup
+                    </button>
+                  </div>
+                )}
+                {(canProcess || userRole === "logistics") && r.status === "ready_for_pickup" && (
+                  <div className="mt-3 pt-3 border-t border-[#E7DED2] flex items-center gap-2">
+                    <button onClick={() => setShowQRModal(r.id)}
+                      className="bg-[#D98B3A] text-white px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-[#c47a2f] transition-colors cursor-pointer flex items-center gap-1">
+                      <span className="material-symbols-outlined text-sm">qr_code</span> Show QR
+                    </button>
+                  </div>
+                )}
               </div>
             )) : (
               <div className="bg-[#FFFDF9] border border-[#E7DED2] rounded-xl p-8 text-center text-sm text-[#74777e]">
@@ -276,6 +308,29 @@ export const Requests = () => {
                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-200 cursor-pointer">Cancel</button>
               <button onClick={handleReject} disabled={!rejectReason.trim()}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-red-700 disabled:opacity-50 cursor-pointer">Reject</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* QR Modal */}
+      {showQRModal && (
+        <div className="fixed inset-0 z-50 bg-[#001d36]/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-[#E7DED2] rounded-2xl max-w-sm w-full p-8 flex flex-col items-center justify-center shadow-2xl relative">
+            <button onClick={() => setShowQRModal(null)} className="absolute top-4 right-4 text-[#74777e] hover:text-[#001d36] cursor-pointer">
+              <span className="material-symbols-outlined">close</span>
+            </button>
+            <h3 className="font-bold text-lg text-[#001d36] mb-2 uppercase tracking-wider text-center">Order QR</h3>
+            <p className="text-xs text-[#74777e] mb-6 font-mono font-bold text-center">#{showQRModal}</p>
+            
+            <div className="w-48 h-48 bg-white border-4 border-[#001d36] p-2 flex items-center justify-center rounded-lg mb-6 shadow-sm">
+              <span className="material-symbols-outlined text-[120px] text-[#001d36]">qr_code_2</span>
+            </div>
+            
+            <div className="text-center">
+              <span className="bg-amber-100 text-amber-800 text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full">
+                Waiting for Logistics Pickup
+              </span>
             </div>
           </div>
         </div>

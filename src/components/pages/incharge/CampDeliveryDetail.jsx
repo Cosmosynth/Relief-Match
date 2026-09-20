@@ -54,19 +54,18 @@ export const CampDeliveryDetail = () => {
   }
 
   const stages = [
-    { label: "Submitted", status: ["Pending", "Accepted", "Preparing", "Dispatched", "In Transit", "Delivered"] },
-    { label: "Accepted", status: ["Accepted", "Preparing", "Dispatched", "In Transit", "Delivered"] },
-    { label: "Preparing", status: ["Preparing", "Dispatched", "In Transit", "Delivered"] },
-    { label: "Dispatched", status: ["Dispatched", "In Transit", "Delivered"] },
-    { label: "In Transit", status: ["In Transit", "Delivered"] },
-    { label: "Delivered", status: ["Delivered"] },
+    { label: "Submitted", status: ["submitted", "preparing", "ready_for_pickup", "dispatched", "in_transit", "delivered"] },
+    { label: "Preparing", status: ["preparing", "ready_for_pickup", "dispatched", "in_transit", "delivered"] },
+    { label: "Ready", status: ["ready_for_pickup", "dispatched", "in_transit", "delivered"] },
+    { label: "Dispatched", status: ["dispatched", "in_transit", "delivered"] },
+    { label: "In Transit", status: ["in_transit", "delivered"] },
+    { label: "Delivered", status: ["delivered"] },
   ];
 
-  const currentStageIndex = stages.findIndex(s => s.label === request.status) > -1 
-    ? stages.findIndex(s => s.label === request.status) 
-    : stages.findIndex(s => s.status.includes(request.status)); // Fallback
+  const currentStageIndex = stages.slice().reverse().findIndex(s => s.status.includes(request.status));
+  const activeIndex = currentStageIndex === -1 ? 0 : stages.length - 1 - currentStageIndex;
 
-  const showMap = request.status === "In Transit" || request.status === "Dispatched";
+  const showMap = request.status === "in_transit" || request.status === "dispatched";
   
   return (
     <div className="bg-[#F7F3EC] text-[#1c1c18] font-sans flex h-screen overflow-hidden antialiased">
@@ -87,11 +86,11 @@ export const CampDeliveryDetail = () => {
               {/* Connecting Line */}
               <div className="absolute top-1/2 left-8 right-8 h-1 bg-[#E7DED2] -translate-y-1/2 z-0"></div>
               <div className="absolute top-1/2 left-8 h-1 bg-green-500 -translate-y-1/2 z-0 transition-all duration-500" 
-                   style={{ width: `calc(${(currentStageIndex / (stages.length - 1)) * 100}% - 3rem)` }}></div>
+                   style={{ width: `calc(${(activeIndex / (stages.length - 1)) * 100}% - 3rem)` }}></div>
               
               {stages.map((stage, idx) => {
-                const isCompleted = idx <= currentStageIndex;
-                const isCurrent = idx === currentStageIndex;
+                const isCompleted = idx <= activeIndex;
+                const isCurrent = idx === activeIndex;
                 return (
                   <div key={idx} className="relative z-10 flex flex-col items-center gap-2 w-24">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center border-4 ${
@@ -152,14 +151,14 @@ export const CampDeliveryDetail = () => {
               </div>
 
               {/* QR Code Placeholder for Receiving */}
-              {(request.status === "In Transit" || request.status === "Delivered") && (
+              {(request.status === "in_transit" || request.status === "delivered") && (
                 <div className="bg-[#FFFDF9] border border-[#E7DED2] rounded-xl p-6 shadow-sm text-center">
                   <h3 className="font-bold text-sm uppercase tracking-wider text-[#001d36] mb-4 flex items-center justify-center gap-2">
                     <span className="material-symbols-outlined text-[#D98B3A]">qr_code_scanner</span>
                     Delivery Confirmation
                   </h3>
                   
-                  {request.status === "Delivered" ? (
+                  {request.status === "delivered" ? (
                     <div className="bg-green-50 border border-green-200 text-green-800 rounded-lg p-4 font-bold text-sm flex flex-col items-center gap-2">
                       <span className="material-symbols-outlined text-3xl">check_circle</span>
                       Delivery Confirmed

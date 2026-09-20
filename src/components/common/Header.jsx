@@ -8,17 +8,8 @@ export const Header = ({ title = "Command Center" }) => {
   const location = useLocation()
   const { currentUser, userRole, logout } = useAuth()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [roleMenuOpen, setRoleMenuOpen] = useState(false)
-
   const userEmail = currentUser?.email || localStorage.getItem("userEmail") || "user@reliefmatch.ai"
   const roleInfo = ROLES[userRole] || { label: userRole, icon: "person" }
-
-  const switchRole = (newRole) => {
-    localStorage.setItem("role", newRole)
-    localStorage.setItem("token", "token_" + Date.now())
-    setRoleMenuOpen(false)
-    window.location.reload()
-  }
 
   const allNavItems = [
     { name: "Command Center", path: "/admin", icon: "dashboard" },
@@ -86,20 +77,18 @@ export const Header = ({ title = "Command Center" }) => {
             </button>
           </div>
 
-          {/* User Profile & Role Switcher */}
+          {/* User Profile */}
           <div className="relative flex items-center gap-3 pl-2 border-l border-[#E7DED2]">
-            <div className="hidden xl:block text-right cursor-pointer" onClick={() => setRoleMenuOpen(!roleMenuOpen)}>
+            <div className="hidden xl:block text-right">
               <div className="text-xs font-bold text-[#001d36] truncate max-w-[140px]">{userEmail}</div>
               <div className="text-[10px] font-mono font-bold text-[#D98B3A] uppercase flex items-center justify-end gap-1">
                 {roleInfo.label}
-                <span className="material-symbols-outlined text-[12px]">expand_more</span>
               </div>
             </div>
 
             <div
-              onClick={() => setRoleMenuOpen(!roleMenuOpen)}
-              className="w-9 h-9 rounded-full overflow-hidden border-2 border-[#D98B3A] shrink-0 cursor-pointer hover:ring-2 hover:ring-[#D98B3A]/40 transition-all"
-              title="Quick Demo Role Switcher"
+              className="w-9 h-9 rounded-full overflow-hidden border-2 border-[#D98B3A] shrink-0"
+              title="User Avatar"
             >
               <img
                 alt="User Avatar"
@@ -107,30 +96,6 @@ export const Header = ({ title = "Command Center" }) => {
                 src={currentUser?.photoURL || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256"}
               />
             </div>
-
-            {/* Role Switcher Dropdown */}
-            {roleMenuOpen && (
-              <div className="absolute right-0 top-12 w-72 bg-white border border-[#E7DED2] rounded-xl shadow-xl p-3 z-50 space-y-2">
-                <div className="text-[10px] font-mono font-bold text-[#74777e] uppercase border-b border-[#E7DED2] pb-1">
-                  Demo Role Switcher
-                </div>
-                {Object.entries(ROLES).map(([key, info]) => (
-                  <button
-                    key={key}
-                    onClick={() => switchRole(key)}
-                    className={`w-full text-left p-2 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors ${
-                      userRole === key ? "bg-[#001d36] text-white" : "hover:bg-[#F7F3EC] text-[#001d36]"
-                    }`}
-                  >
-                    <span className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-sm">{info.icon}</span>
-                      {info.label}
-                    </span>
-                    {userRole === key && <span className="material-symbols-outlined text-sm">check</span>}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       </header>

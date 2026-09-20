@@ -55,17 +55,10 @@ export const Dashboard = () => {
       case "deliveredToday": return shipments.filter(s => s.status === "delivered" || s.status === "confirmed").length
       case "urgentShortages": return requests.filter(r => r.urgency === "critical" && ["submitted", "verified", "unmatched"].includes(r.status)).length
       // Admin2 KPIs
-      case "stockLines": return supplies.length
-      case "expiring7d": {
-        const week = new Date(now.getTime() + 7 * 86400000)
-        return supplies.filter(s => {
-          if (!s.expiryDate) return false
-          const exp = typeof s.expiryDate === "string" ? new Date(s.expiryDate) : new Date((s.expiryDate?.seconds || 0) * 1000)
-          return exp <= week && exp >= now
-        }).length
-      }
-      case "reservedDispatched": return supplies.filter(s => s.status === "reserved" || s.status === "dispatched").length
-      case "unmetDemand": return requests.filter(r => ["submitted", "verified", "unmatched", "partially_matched"].includes(r.status)).length
+      case "pendingRequests": return requests.filter(r => r.status === "submitted").length
+      case "criticalShortages": return requests.filter(r => r.urgency === "critical" && ["submitted", "verified", "unmatched"].includes(r.status)).length
+      case "ordersPreparing": return requests.filter(r => r.status === "preparing" || r.status === "ready_for_pickup").length
+      case "inTransitDelivered": return requests.filter(r => r.status === "in_transit" || r.status === "delivered").length
       // Incharge KPIs
       case "myOpenRequests": return requests.filter(r => !["fulfilled", "rejected", "cancelled", "delivered"].includes(r.status)).length
       case "awaitingMatch": return requests.filter(r => ["verified", "unmatched"].includes(r.status)).length

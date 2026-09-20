@@ -4,6 +4,7 @@ import { Sidebar } from '../common/Sidebar'
 import { Header } from '../common/Header'
 import { useAuth } from '../../context/AuthContext'
 import { listenToMatches, approveMatch, rejectMatch, createShipment, listenToShipments, markPickedUp, markDelivered, confirmReceipt } from '../../services/matchService'
+import { listenToRequests, verifyPickup, completeDelivery } from '../../services/requestService'
 import { releaseStock } from '../../services/supplyService'
 import { executeMatching } from '../../services/matchingEngine'
 
@@ -12,7 +13,9 @@ export const MatchesDeliveries = () => {
   const { userRole, userCampId, currentUser } = useAuth()
   const [matches, setMatches] = useState([])
   const [shipments, setShipments] = useState([])
+  const [requests, setRequests] = useState([])
   const [activeTab, setActiveTab] = useState(userRole === "logistics" ? "deliveries" : "matches")
+  const [scanningQR, setScanningQR] = useState(null)
 
   useEffect(() => {
     const mFilters = userRole === "incharge" && userCampId ? { campId: userCampId } : {}
@@ -20,6 +23,7 @@ export const MatchesDeliveries = () => {
     const unsubs = [
       listenToMatches(setMatches, mFilters),
       listenToShipments(setShipments, sFilters),
+      listenToRequests(setRequests, {}),
     ]
     return () => unsubs.forEach(u => u())
   }, [userRole, userCampId, currentUser?.uid])
@@ -54,8 +58,27 @@ export const MatchesDeliveries = () => {
     try { await confirmReceipt(shipId, currentUser?.uid) } catch (e) { alert("Error: " + e.message) }
   }
 
+  // Logistics unified workflow handlers
+  const handleScanQR = async (reqId) => {
+    setScanningQR(reqId)
+    // mock delay
+    setTimeout(async () => {
+      try { 
+        await verifyPickup(reqId, currentUser?.uid) 
+        setScanningQR(null)
+      } catch (e) { 
+        alert("Scan Failed: " + e.message) 
+        setScanningQR(null)
+      }
+    }, 1500)
+  }
+
+  const handleFinishDelivery = async (reqId) => {
+    try { await completeDelivery(reqId, currentUser?.uid) } catch (e) { alert("Error: " + e.message) }
+  }
+
   const matchStatus = (s) => {
-    const c = { proposed: "bg-blue-100 text-blue-800", approved: "bg-green-100 text-green-800", rejected: "bg-red-100 text-red-800", in_transit: "bg-purple-100 text-purple-800", delivered: "bg-teal-100 text-teal-800", fulfilled: "bg-emerald-100 text-emerald-800" }
+    const c = { proposed: "bg-blue-100 text-blue-800", approved: "bg-green-100 text-green-800", rejected: "bg-red-100 text-red-800", in_transit: "bg-purple-100 text-purple-800", delivered: "bg-teal-100 text-teal-800", fulfilled: "bg-emerald-100 text-emerald-800", preparing: "bg-blue-100 text-blue-800", ready_for_pickup: "bg-amber-100 text-amber-800" }
     return c[s] || "bg-gray-100 text-gray-800"
   }
 
@@ -79,7 +102,7 @@ export const MatchesDeliveries = () => {
               </button>
               <button onClick={() => setActiveTab("deliveries")}
                 className={`pb-3 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 cursor-pointer ${activeTab === "deliveries" ? "border-[#D98B3A] text-[#001d36]" : "border-transparent text-[#74777e] hover:text-[#001d36]"}`}>
-                Deliveries ({shipments.length})
+                Deliveries ({userRole === 'logistics' ? requests.filter(r => ['ready_for_pickup', 'in_transit', 'delivered'].includes(r.status)).length : shipments.length})
               </button>
             </div>
             {userRole === "admin2" && (
@@ -137,56 +160,87 @@ export const MatchesDeliveries = () => {
 
           {activeTab === "deliveries" && (
             <div className="space-y-3">
-              {shipments.length > 0 ? shipments.map(s => (
-                <div key={s.id} className="bg-[#FFFDF9] border border-[#E7DED2] rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-[#D98B3A]">local_shipping</span>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${shipStatus(s.status)}`}>{s.status?.replace(/_/g, " ")}</span>
+              {userRole === "logistics" ? (
+                // LOGISTICS UNIFIED WORKFLOW (using requests)
+                requests.filter(r => ['ready_for_pickup', 'in_transit', 'delivered'].includes(r.status)).length > 0 ? (
+                  requests.filter(r => ['ready_for_pickup', 'in_transit', 'delivered'].includes(r.status)).map(r => (
+                    <div key={r.id} className="bg-[#FFFDF9] border border-[#E7DED2] rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+                      <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="material-symbols-outlined text-[#D98B3A]">local_shipping</span>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${matchStatus(r.status)}`}>{r.status?.replace(/_/g, " ")}</span>
+                        </div>
+                        <span className="text-xs font-semibold text-[#001d36]">→ {r.campName || r.campId}</span>
+                      </div>
+                      
+                      <div className="mt-2 flex flex-wrap items-baseline gap-4">
+                        <h4 className="font-bold text-sm text-[#001d36] capitalize">{r.itemKey?.replace(/_/g, " ")}</h4>
+                        <span className="font-mono font-bold text-[#001d36]">×{r.qtyRequested}</span>
+                      </div>
+                      
+                      <div className="flex flex-wrap gap-2 mt-4">
+                        {r.status === "ready_for_pickup" && (
+                          <button onClick={() => handleScanQR(r.id)} disabled={scanningQR === r.id}
+                            className="bg-[#001d36] text-white px-3 py-1.5 rounded-lg text-xs font-bold uppercase hover:bg-[#17324d] cursor-pointer flex items-center gap-1 disabled:opacity-50">
+                            <span className="material-symbols-outlined text-sm">{scanningQR === r.id ? 'hourglass_empty' : 'qr_code_scanner'}</span> 
+                            {scanningQR === r.id ? 'Scanning...' : 'Scan Pickup QR'}
+                          </button>
+                        )}
+                        {r.status === "in_transit" && (
+                          <button onClick={() => handleFinishDelivery(r.id)}
+                            className="bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold uppercase hover:bg-green-700 cursor-pointer flex items-center gap-1">
+                            <span className="material-symbols-outlined text-sm">check_circle</span> Confirm Delivery
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <span className="text-xs font-semibold text-[#001d36]">→ {s.campName || "Camp"}</span>
+                  ))
+                ) : (
+                  <div className="bg-[#FFFDF9] border border-[#E7DED2] rounded-xl p-8 text-center text-sm text-[#74777e]">No active orders found.</div>
+                )
+              ) : (
+                // LEGACY SHIPMENTS (for admin1/incharge)
+                shipments.length > 0 ? shipments.map(s => (
+                  <div key={s.id} className="bg-[#FFFDF9] border border-[#E7DED2] rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-[#D98B3A]">local_shipping</span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${shipStatus(s.status)}`}>{s.status?.replace(/_/g, " ")}</span>
+                      </div>
+                      <span className="text-xs font-semibold text-[#001d36]">→ {s.campName || "Camp"}</span>
+                    </div>
+  
+                    {/* Timeline */}
+                    <div className="flex items-center gap-1 my-3">
+                      {["assigned", "picked_up", "delivered", "confirmed"].map((step, i) => {
+                        const steps = ["assigned", "picked_up", "delivered", "confirmed"]
+                        const currentIdx = steps.indexOf(s.status)
+                        const done = i <= currentIdx
+                        return (
+                          <React.Fragment key={step}>
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${done ? "bg-green-600 text-white" : "bg-[#E7DED2] text-[#74777e]"}`}>
+                              {done ? "✓" : i + 1}
+                            </div>
+                            {i < 3 && <div className={`flex-1 h-0.5 ${i < currentIdx ? "bg-green-500" : "bg-[#E7DED2]"}`}></div>}
+                          </React.Fragment>
+                        )
+                      })}
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] text-[#74777e] mb-3">
+                      <span>Assigned</span><span>Picked Up</span><span>Delivered</span><span>Confirmed</span>
+                    </div>
+  
+                    <div className="flex flex-wrap gap-2">
+                      {userRole === "incharge" && s.status === "delivered" && (
+                        <button onClick={() => handleConfirm(s.id)} className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold uppercase hover:bg-emerald-700 cursor-pointer flex items-center gap-1">
+                          <span className="material-symbols-outlined text-sm">verified</span> Confirm Receipt
+                        </button>
+                      )}
+                    </div>
                   </div>
-
-                  {/* Timeline */}
-                  <div className="flex items-center gap-1 my-3">
-                    {["assigned", "picked_up", "delivered", "confirmed"].map((step, i) => {
-                      const steps = ["assigned", "picked_up", "delivered", "confirmed"]
-                      const currentIdx = steps.indexOf(s.status)
-                      const done = i <= currentIdx
-                      return (
-                        <React.Fragment key={step}>
-                          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${done ? "bg-green-600 text-white" : "bg-[#E7DED2] text-[#74777e]"}`}>
-                            {done ? "✓" : i + 1}
-                          </div>
-                          {i < 3 && <div className={`flex-1 h-0.5 ${i < currentIdx ? "bg-green-500" : "bg-[#E7DED2]"}`}></div>}
-                        </React.Fragment>
-                      )
-                    })}
-                  </div>
-                  <div className="flex items-center justify-between text-[10px] text-[#74777e] mb-3">
-                    <span>Assigned</span><span>Picked Up</span><span>Delivered</span><span>Confirmed</span>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    {userRole === "logistics" && s.status === "assigned" && (
-                      <button onClick={() => handlePickup(s.id)} className="bg-amber-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold uppercase hover:bg-amber-700 cursor-pointer flex items-center gap-1">
-                        <span className="material-symbols-outlined text-sm">move_to_inbox</span> Mark Picked Up
-                      </button>
-                    )}
-                    {userRole === "logistics" && s.status === "picked_up" && (
-                      <button onClick={() => handleDeliver(s.id)} className="bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold uppercase hover:bg-green-700 cursor-pointer flex items-center gap-1">
-                        <span className="material-symbols-outlined text-sm">check_circle</span> Mark Delivered
-                      </button>
-                    )}
-                    {userRole === "incharge" && s.status === "delivered" && (
-                      <button onClick={() => handleConfirm(s.id)} className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold uppercase hover:bg-emerald-700 cursor-pointer flex items-center gap-1">
-                        <span className="material-symbols-outlined text-sm">verified</span> Confirm Receipt
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )) : (
-                <div className="bg-[#FFFDF9] border border-[#E7DED2] rounded-xl p-8 text-center text-sm text-[#74777e]">No deliveries yet.</div>
+                )) : (
+                  <div className="bg-[#FFFDF9] border border-[#E7DED2] rounded-xl p-8 text-center text-sm text-[#74777e]">No deliveries yet.</div>
+                )
               )}
             </div>
           )}

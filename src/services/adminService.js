@@ -22,7 +22,7 @@ export const SIDEBAR_ACCESS = {
  */
 export const canWrite = (role, page) => {
   const map = {
-    "/admin/requests": ["admin1", "incharge"],
+    "/admin/requests": ["admin1", "incharge", "admin2"],
     "/admin/supply": ["admin2"],
     "/admin/matches": ["admin1", "logistics", "incharge"],
     "/admin/control-center": ["admin1"],
@@ -40,10 +40,10 @@ export const KPI_CONFIG = {
     { key: "urgentShortages", label: "Urgent Shortages", icon: "campaign", borderColor: "border-l-red-600" },
   ],
   admin2: [
-    { key: "stockLines", label: "Stock Lines", icon: "inventory", borderColor: "border-l-blue-500" },
-    { key: "expiring7d", label: "Expiring in 7 Days", icon: "schedule", borderColor: "border-l-amber-500" },
-    { key: "reservedDispatched", label: "Reserved / Dispatched", icon: "local_shipping", borderColor: "border-l-green-500" },
-    { key: "unmetDemand", label: "Unmet Demand", icon: "warning", borderColor: "border-l-red-600" },
+    { key: "pendingRequests", label: "Pending Requests", icon: "assignment", borderColor: "border-l-orange-500" },
+    { key: "criticalShortages", label: "Critical Shortages", icon: "warning", borderColor: "border-l-red-600" },
+    { key: "ordersPreparing", label: "Orders Preparing", icon: "inventory", borderColor: "border-l-blue-500" },
+    { key: "inTransitDelivered", label: "In Transit / Delivered", icon: "local_shipping", borderColor: "border-l-green-500" },
   ],
   incharge: [
     { key: "myOpenRequests", label: "My Open Requests", icon: "assignment", borderColor: "border-l-orange-500" },
