@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+@layer base {
+  body {
+    background-color: #F7F3EC;
+    color: #1c1c18; /* on-background */
+    font-family: 'Inter', sans-serif;
+  }
+  
+  /* Reset default React template styles on #root if any */
+  #root {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    text-align: left;
+    border: none;
+    min-height: 100vh;
+  }
+}
+
+@layer utilities {
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
+
+  /* Custom Scrollbar for light theme */
+  ::-webkit-scrollbar {
+    width: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #e6e2db; /* surface-variant */
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #74777e; /* outline */
+  }
+
+  /* Ticker marquee animation */
+  .animate-ticker {
+    animation: ticker 30s linear infinite;
+  }
+
+  /* Glassmorphism panel for Login page */
+  .glass-panel {
+    background: rgba(255, 253, 249, 0.75);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Input field focus transition for Login page */
+  .input-field {
+    transition: all 0.2s ease-in-out;
+    background: rgba(255, 255, 255, 0.6);
+  }
+  .input-field:focus {
+    border-color: #17324d;
+    box-shadow: 0 0 0 2px rgba(23, 50, 77, 0.1);
+    outline: none;
+    background: rgba(255, 255, 255, 0.9);
+  }
+
+  /* Status pulse for Login page indicators */
+  .status-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* Dashboard card base style */
+  .card-base {
+    background-color: #FFFDF9;
+    border: 1px solid #E7DED2;
+    box-shadow: 0px 2px 4px rgba(23, 50, 77, 0.05);
+  }
+}
+
+/* Keyframes */
+@keyframes ticker {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .5; }
+}

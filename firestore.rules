@@ -1,0 +1,178 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (request.auth.token.email == "admin@codecrafters.ai" ||
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin");
+    }
+
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isActive() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == "active";
+    }
+
+    function isRole(role) {
+      return isActive() && getUserRole() == role;
+    }
+
+    function isAnyRole(roles) {
+      return isActive() && (getUserRole() in roles);
+    }
+
+    // ─── USERS Collection ───
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      // New users can create ONLY their own pending document
+      allow create: if isAuthenticated() && request.auth.uid == userId &&
+        request.resource.data.status == "pending";
+      // Admin1 can update any user; users cannot edit their own role or status
+      allow update: if isAuthenticated() && (
+        isRole("admin1") ||
+        (request.auth.uid == userId &&
+         !request.resource.data.diff(resource.data).affectedKeys().hasAny(["role", "status"]))
+      );
+    }
+
+    // ─── EXISTING Collections (preserved) ───
+    match /incidents/{incidentId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && request.resource.data.createdBy == request.auth.uid;
+      allow update, delete: if isAuthenticated() && isAdmin();
+    }
+
+    match /incident_sources/{sourceId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    match /incident_clusters/{clusterId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    match /sensor_readings/{readingId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    match /response_recommendations/{recId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    match /system_health/{docId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /alerts/{alertId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
+    match /intelligence/{itemId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+
+    // ─── NEW: CAMPS ───
+    match /camps/{campId} {
+      allow read: if isAuthenticated();
+      allow write: if isRole("admin1");
+    }
+
+    // ─── NEW: REQUESTS ───
+    match /requests/{requestId} {
+      allow read: if isActive();
+      // Incharge can create for own camp only
+      allow create: if isActive() && (
+        isRole("admin1") ||
+        (isRole("incharge") && request.resource.data.campId ==
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.campId)
+      );
+      // Admin1 can update (verify/reject); incharge can update own camp requests
+      allow update: if isActive() && (
+        isRole("admin1") ||
+        (isRole("incharge") && resource.data.campId ==
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.campId)
+      );
+    }
+
+    // ─── NEW: SUPPLIES ───
+    match /supplies/{supplyId} {
+      allow read: if isActive();
+      allow create: if isRole("admin2");
+      // Admin2 can update all fields; admin1 can update reservation fields only
+      allow update: if isActive() && (
+        isRole("admin2") ||
+        (isRole("admin1") && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["qtyAvailable", "qtyReserved", "status", "updatedAt"]))
+      );
+    }
+
+    // ─── NEW: MATCHES ───
+    match /matches/{matchId} {
+      allow read: if isActive();
+      allow create, update: if isRole("admin1");
+    }
+
+    // ─── NEW: SHIPMENTS ───
+    match /shipments/{shipmentId} {
+      allow read: if isActive();
+      allow create: if isAnyRole(["admin1", "logistics"]);
+      // Logistics updates assigned shipments; incharge writes receipt confirmation only
+      allow update: if isActive() && (
+        isRole("admin1") ||
+        isRole("logistics") ||
+        (isRole("incharge") && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["status", "updatedAt"]) && request.resource.data.status == "confirmed")
+      );
+    }
+
+    // ─── NEW: ACTIVITY (create-only) ───
+    match /activity/{activityId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if false;
+    }
+
+    // ─── AUDIT LOGS (create-only, read by admin1) ───
+    match /audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated();
+      allow update, delete: if false;
+    }
+
+    match /auditLogs/{logId} {
+      allow read: if isActive() && isRole("admin1");
+      allow create: if isAuthenticated();
+      allow update, delete: if false;
+    }
+
+    // ─── NEW: INVITES ───
+    match /invites/{email} {
+      allow read: if isAuthenticated();
+      allow create: if isRole("admin1");
+      allow update: if isAuthenticated(); // claim on sign-in
+    }
+
+    // ─── NEW: CONFIG ───
+    match /config/{docId} {
+      allow read: if isActive();
+      allow write: if isRole("admin1");
+    }
+  }
+}
