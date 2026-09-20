@@ -166,6 +166,21 @@ export const ReliefMap = ({
       }
     })
 
+    // ─── Shipment Route Lines (logistics assigned routes) ───
+    shipments.forEach((trip) => {
+      if (trip.route && trip.route.pickupLat && trip.route.pickupLng && trip.route.destLat && trip.route.destLng) {
+        const line = L.polyline(
+          [[trip.route.pickupLat, trip.route.pickupLng], [trip.route.destLat, trip.route.destLng]],
+          { color: "#7c3aed", weight: 3, opacity: 0.7, dashArray: "8 6" }
+        ).addTo(routesLayer)
+        line.bindPopup(`<div style="font-size:11px;"><b>Trip Route</b><br/>${(trip.status || "assigned").toUpperCase()} → ${trip.campName || "Camp"}</div>`)
+
+        // Add route endpoint markers to bounds
+        bounds.push([trip.route.pickupLat, trip.route.pickupLng])
+        bounds.push([trip.route.destLat, trip.route.destLng])
+      }
+    })
+
     // Fit bounds
     if (bounds.length > 0) {
       if (bounds.length === 1) {

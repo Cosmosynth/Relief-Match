@@ -53,6 +53,12 @@ export const Supply = () => {
               <span className="material-symbols-outlined text-[#D98B3A]">inventory_2</span>
               Donor Supply Inventory
               <span className="bg-[#001d36] text-white text-[10px] px-2 py-0.5 rounded-full font-mono">{supplies.length}</span>
+              {!canWrite && (
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-bold uppercase tracking-wider">
+                  <span className="material-symbols-outlined text-sm">visibility</span>
+                  Read-Only
+                </span>
+              )}
             </h2>
             {canWrite && (
               <button onClick={() => setShowForm(!showForm)}

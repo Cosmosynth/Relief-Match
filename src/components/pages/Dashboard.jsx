@@ -4,7 +4,7 @@ import { Sidebar } from '../common/Sidebar'
 import { Header } from '../common/Header'
 import { ReliefMap } from '../common/DisasterMap'
 import { useAuth } from '../../context/AuthContext'
-import { KPI_CONFIG, ROLE_CTA } from '../../services/adminService'
+import { KPI_CONFIG, ROLE_CTA, MAP_LAYERS, DASHBOARD_FILTERS, DASHBOARD_PANELS } from '../../services/adminService'
 import { listenToRequests } from '../../services/requestService'
 import { listenToSupplies } from '../../services/supplyService'
 import { listenToMatches, listenToShipments } from '../../services/matchService'
@@ -117,6 +117,42 @@ export const Dashboard = () => {
     }
   })
 
+  // ─── Role-filtered map data ───
+  const showLayers = MAP_LAYERS[userRole] || MAP_LAYERS.admin1
+  const filterCfg = DASHBOARD_FILTERS[userRole] || DASHBOARD_FILTERS.admin1
+  const panelCfg = DASHBOARD_PANELS[userRole] || DASHBOARD_PANELS.admin1
+
+  const mapCamps = (() => {
+    if (userRole === "incharge" && userCampId) return enrichedCamps.filter(c => c.id === userCampId)
+    if (userRole === "admin2") return enrichedCamps.filter(c => c.urgencyLevel === "urgent" || c.urgencyLevel === "partial")
+    if (userRole === "logistics") return []
+    return enrichedCamps // admin1
+  })()
+
+  const mapSupplies = (() => {
+    if (userRole === "incharge" && userCampId) {
+      const matchedSupplyIds = new Set(matches.map(m => m.supplyId))
+      return supplies.filter(s => matchedSupplyIds.has(s.id))
+    }
+    if (userRole === "logistics") return []
+    return supplies // admin1, admin2
+  })()
+
+  const mapShipments = (() => {
+    if (userRole === "incharge" && userCampId) return shipments.filter(s => s.campId === userCampId)
+    if (userRole === "admin2") return []
+    if (userRole === "logistics") return shipments // already filtered by driverUid in listener
+    return shipments // admin1
+  })()
+
+  const mapMatches = (() => {
+    if (userRole === "logistics") {
+      const shipMatchIds = new Set(shipments.flatMap(s => s.matchIds || []))
+      return matches.filter(m => shipMatchIds.has(m.id))
+    }
+    return matches
+  })()
+
   // Urgent shortages list
   const urgentShortages = requests
     .filter(r => r.urgency === "critical" && ["submitted", "verified", "unmatched", "partially_matched"].includes(r.status))
@@ -133,41 +169,47 @@ export const Dashboard = () => {
           {/* Filters Bar */}
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-2 bg-[#FFFDF9] border border-[#E7DED2] rounded-lg px-3 py-1.5 shadow-sm text-xs font-semibold text-[#1c1c18]">
-                <span className="material-symbols-outlined text-[#74777e] text-sm">filter_list</span>
-                <span>Item:</span>
-                <select value={selectedItem} onChange={(e) => setSelectedItem(e.target.value)}
-                  className="bg-transparent border-none font-bold text-[#001d36] focus:outline-none cursor-pointer">
-                  <option value="All">All Items</option>
-                  <option value="water">Water</option>
-                  <option value="food">Food</option>
-                  <option value="medicine">Medicine</option>
-                  <option value="blankets">Blankets</option>
-                  <option value="tents">Tents</option>
-                </select>
-              </div>
+              {filterCfg.item && (
+                <div className="flex items-center gap-2 bg-[#FFFDF9] border border-[#E7DED2] rounded-lg px-3 py-1.5 shadow-sm text-xs font-semibold text-[#1c1c18]">
+                  <span className="material-symbols-outlined text-[#74777e] text-sm">filter_list</span>
+                  <span>Item:</span>
+                  <select value={selectedItem} onChange={(e) => setSelectedItem(e.target.value)}
+                    className="bg-transparent border-none font-bold text-[#001d36] focus:outline-none cursor-pointer">
+                    <option value="All">All Items</option>
+                    <option value="water">Water</option>
+                    <option value="food">Food</option>
+                    <option value="medicine">Medicine</option>
+                    <option value="blankets">Blankets</option>
+                    <option value="tents">Tents</option>
+                  </select>
+                </div>
+              )}
 
-              <div className="flex items-center gap-2 bg-[#FFFDF9] border border-[#E7DED2] rounded-lg px-3 py-1.5 shadow-sm text-xs font-semibold text-[#1c1c18]">
-                <span className="material-symbols-outlined text-[#74777e] text-sm">location_on</span>
-                <span>Camp:</span>
-                <select value={selectedCamp} onChange={(e) => setSelectedCamp(e.target.value)}
-                  className="bg-transparent border-none font-bold text-[#001d36] focus:outline-none cursor-pointer">
-                  <option value="All">All Camps</option>
-                  {camps.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
+              {filterCfg.camp && (
+                <div className="flex items-center gap-2 bg-[#FFFDF9] border border-[#E7DED2] rounded-lg px-3 py-1.5 shadow-sm text-xs font-semibold text-[#1c1c18]">
+                  <span className="material-symbols-outlined text-[#74777e] text-sm">location_on</span>
+                  <span>Camp:</span>
+                  <select value={selectedCamp} onChange={(e) => setSelectedCamp(e.target.value)}
+                    className="bg-transparent border-none font-bold text-[#001d36] focus:outline-none cursor-pointer">
+                    <option value="All">All Camps</option>
+                    {camps.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+              )}
 
-              <div className="flex items-center gap-2 bg-[#FFFDF9] border border-[#E7DED2] rounded-lg px-3 py-1.5 shadow-sm text-xs font-semibold text-[#1c1c18]">
-                <span className="material-symbols-outlined text-[#74777e] text-sm">priority_high</span>
-                <span>Urgency:</span>
-                <select value={selectedUrgency} onChange={(e) => setSelectedUrgency(e.target.value)}
-                  className="bg-transparent border-none font-bold text-[#001d36] focus:outline-none cursor-pointer">
-                  <option value="All">All Levels</option>
-                  <option value="critical">Critical</option>
-                  <option value="high">High</option>
-                  <option value="normal">Normal</option>
-                </select>
-              </div>
+              {filterCfg.urgency && (
+                <div className="flex items-center gap-2 bg-[#FFFDF9] border border-[#E7DED2] rounded-lg px-3 py-1.5 shadow-sm text-xs font-semibold text-[#1c1c18]">
+                  <span className="material-symbols-outlined text-[#74777e] text-sm">priority_high</span>
+                  <span>Urgency:</span>
+                  <select value={selectedUrgency} onChange={(e) => setSelectedUrgency(e.target.value)}
+                    className="bg-transparent border-none font-bold text-[#001d36] focus:outline-none cursor-pointer">
+                    <option value="All">All Levels</option>
+                    <option value="critical">Critical</option>
+                    <option value="high">High</option>
+                    <option value="normal">Normal</option>
+                  </select>
+                </div>
+              )}
             </div>
 
             <button
@@ -214,11 +256,12 @@ export const Dashboard = () => {
               </div>
               <div className="flex-1 relative bg-[#121d27] p-2 flex flex-col justify-center">
                 <ReliefMap
-                  camps={enrichedCamps}
-                  supplies={supplies}
-                  shipments={shipments}
-                  matches={matches}
+                  camps={mapCamps}
+                  supplies={mapSupplies}
+                  shipments={mapShipments}
+                  matches={mapMatches}
                   height="440px"
+                  showLayers={showLayers}
                   onSelectCamp={(c) => navigate("/admin/requests")}
                 />
               </div>
@@ -227,58 +270,62 @@ export const Dashboard = () => {
             {/* Right Panels */}
             <div className="lg:col-span-4 flex flex-col space-y-4">
               {/* Urgent Shortages */}
-              <div className="bg-[#FFFDF9] border border-red-200 rounded-xl p-4 shadow-sm">
-                <div className="flex items-center justify-between mb-3 pb-2 border-b border-red-100">
-                  <h3 className="font-bold text-xs uppercase tracking-wider text-red-800 flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-sm text-red-600">campaign</span>
-                    Urgent Shortages
-                  </h3>
-                  <span className="bg-red-100 text-red-800 text-[10px] font-bold px-2 py-0.5 rounded-full">{urgentShortages.length}</span>
-                </div>
-                <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                  {urgentShortages.length > 0 ? urgentShortages.map((r) => (
-                    <div key={r.id} className="p-2 border border-red-100 rounded-lg bg-red-50/50 text-xs cursor-pointer hover:border-red-300 transition-colors" onClick={() => navigate("/admin/requests")}>
-                      <div className="flex justify-between items-center">
-                        <span className="font-bold text-[#001d36]">{r.itemKey}</span>
-                        <span className="text-red-700 font-mono font-bold">×{r.qtyRequested - (r.qtyMatched || 0)}</span>
+              {panelCfg.urgentShortages && (
+                <div className="bg-[#FFFDF9] border border-red-200 rounded-xl p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-3 pb-2 border-b border-red-100">
+                    <h3 className="font-bold text-xs uppercase tracking-wider text-red-800 flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-sm text-red-600">campaign</span>
+                      Urgent Shortages
+                    </h3>
+                    <span className="bg-red-100 text-red-800 text-[10px] font-bold px-2 py-0.5 rounded-full">{urgentShortages.length}</span>
+                  </div>
+                  <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                    {urgentShortages.length > 0 ? urgentShortages.map((r) => (
+                      <div key={r.id} className="p-2 border border-red-100 rounded-lg bg-red-50/50 text-xs cursor-pointer hover:border-red-300 transition-colors" onClick={() => navigate("/admin/requests")}>
+                        <div className="flex justify-between items-center">
+                          <span className="font-bold text-[#001d36]">{r.itemKey}</span>
+                          <span className="text-red-700 font-mono font-bold">×{r.qtyRequested - (r.qtyMatched || 0)}</span>
+                        </div>
+                        <div className="text-[10px] text-[#74777e] mt-0.5">{r.campName || r.campId}</div>
                       </div>
-                      <div className="text-[10px] text-[#74777e] mt-0.5">{r.campName || r.campId}</div>
-                    </div>
-                  )) : (
-                    <p className="text-xs text-[#74777e] text-center py-4">No urgent shortages</p>
-                  )}
+                    )) : (
+                      <p className="text-xs text-[#74777e] text-center py-4">No urgent shortages</p>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Activity Feed */}
-              <div className="bg-[#FFFDF9] border border-[#E7DED2] rounded-xl p-4 flex-1 flex flex-col shadow-sm">
-                <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#E7DED2]">
-                  <h3 className="font-bold text-xs uppercase tracking-wider text-[#001d36]">Activity & Alerts</h3>
+              {panelCfg.activity && (
+                <div className="bg-[#FFFDF9] border border-[#E7DED2] rounded-xl p-4 flex-1 flex flex-col shadow-sm">
+                  <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#E7DED2]">
+                    <h3 className="font-bold text-xs uppercase tracking-wider text-[#001d36]">Activity & Alerts</h3>
+                  </div>
+                  <div className="space-y-2 flex-1 overflow-y-auto max-h-[300px]">
+                    {activity.length > 0 ? activity.map((a) => {
+                      const severityColors = {
+                        success: "border-l-green-500",
+                        warning: "border-l-amber-500",
+                        error: "border-l-red-500",
+                        info: "border-l-blue-500",
+                      }
+                      return (
+                        <div key={a.id} className={`p-2 border border-[#E7DED2] border-l-4 ${severityColors[a.severity] || "border-l-blue-500"} rounded-lg bg-white text-xs`}>
+                          <p className="font-medium text-[#001d36]">{a.message}</p>
+                          <p className="text-[10px] text-[#74777e] mt-0.5">
+                            {a.createdAt?.toDate ? a.createdAt.toDate().toLocaleTimeString() : "Just now"}
+                          </p>
+                        </div>
+                      )
+                    }) : (
+                      <p className="text-xs text-[#74777e] text-center py-4">No recent activity</p>
+                    )}
+                  </div>
                 </div>
-                <div className="space-y-2 flex-1 overflow-y-auto max-h-[300px]">
-                  {activity.length > 0 ? activity.map((a) => {
-                    const severityColors = {
-                      success: "border-l-green-500",
-                      warning: "border-l-amber-500",
-                      error: "border-l-red-500",
-                      info: "border-l-blue-500",
-                    }
-                    return (
-                      <div key={a.id} className={`p-2 border border-[#E7DED2] border-l-4 ${severityColors[a.severity] || "border-l-blue-500"} rounded-lg bg-white text-xs`}>
-                        <p className="font-medium text-[#001d36]">{a.message}</p>
-                        <p className="text-[10px] text-[#74777e] mt-0.5">
-                          {a.createdAt?.toDate ? a.createdAt.toDate().toLocaleTimeString() : "Just now"}
-                        </p>
-                      </div>
-                    )
-                  }) : (
-                    <p className="text-xs text-[#74777e] text-center py-4">No recent activity</p>
-                  )}
-                </div>
-              </div>
+              )}
 
               {/* Stats Row (admin1 only) */}
-              {userRole === "admin1" && (
+              {panelCfg.stats && (
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-[#FFFDF9] border border-[#E7DED2] rounded-xl p-3 shadow-sm text-center">
                     <div className="text-[10px] text-[#74777e] uppercase font-bold tracking-wider">Fulfillment Rate</div>

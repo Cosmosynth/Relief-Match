@@ -20,14 +20,16 @@ const DEFAULT_DEMO_PROFILE = {
   uid: "demo-admin-123",
   name: "Demo Administrator",
   email: "admin@reliefmatch.ai",
-  role: "admin1",
   status: "active",
   campId: null
 }
 
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(DEFAULT_DEMO_USER)
-  const [userProfile, setUserProfile] = useState(DEFAULT_DEMO_PROFILE)
+  const [userProfile, setUserProfile] = useState(() => ({
+    ...DEFAULT_DEMO_PROFILE,
+    role: localStorage.getItem("role") || "admin1"
+  }))
   const [loading, setLoading] = useState(false)
   const [pendingApproval, setPendingApproval] = useState(false)
 

@@ -4,6 +4,7 @@ import { Header } from '../common/Header'
 import { useAuth } from '../../context/AuthContext'
 import { listenToRequests, submitRequest, verifyRequest, rejectRequest } from '../../services/requestService'
 import { listenToCamps } from '../../services/campService'
+import { canWrite } from '../../services/adminService'
 
 export const Requests = () => {
   const { userRole, userCampId, currentUser } = useAuth()
@@ -37,6 +38,7 @@ export const Requests = () => {
 
   const canSubmit = userRole === "incharge"
   const canVerify = userRole === "admin1"
+  const isReadOnly = !canWrite(userRole, "/admin/requests")
 
   // Filter by chip
   let filteredRequests = requests
@@ -132,6 +134,12 @@ export const Requests = () => {
                   {chip === "Unmatched" && <span className="ml-1.5 bg-orange-500 text-white text-[9px] px-1.5 py-0.5 rounded-full">{requests.filter(r => ["submitted", "verified", "unmatched"].includes(r.status)).length}</span>}
                 </button>
               ))}
+              {isReadOnly && (
+                <span className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-bold uppercase tracking-wider">
+                  <span className="material-symbols-outlined text-sm">visibility</span>
+                  Read-Only
+                </span>
+              )}
             </div>
 
             {canSubmit && (

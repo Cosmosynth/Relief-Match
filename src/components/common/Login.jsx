@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth"
 import { doc, getDoc, collection, query, where, getDocs, setDoc, serverTimestamp } from "firebase/firestore"
 import { auth, db, isFirebaseConfigured } from "../../firebase/firebase"
+import { useAuth } from "../../context/AuthContext"
 import LoginscreenBG from '../../assets/LoginscreenBg.png'
 
 export const Login = () => {
   const navigate = useNavigate()
+  const { setUserProfile } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [role, setRole] = useState('admin1')
@@ -48,7 +50,13 @@ export const Login = () => {
       localStorage.setItem("token", "demo_token")
       localStorage.setItem("role", role || "admin1")
       localStorage.setItem("userEmail", email || "patelsaumy@gmail.com")
-      navigate("/admin")
+      setUserProfile(prev => ({ ...prev, role: role || "admin1" }))
+      
+      if (role === "incharge") {
+        navigate("/incharge/dashboard")
+      } else {
+        navigate("/admin")
+      }
     } catch (error) {
       console.error("Login navigation error:", error)
       navigate("/admin")
@@ -77,7 +85,13 @@ export const Login = () => {
       localStorage.setItem("token", "demo_token")
       localStorage.setItem("role", role || "admin1")
       localStorage.setItem("userEmail", "google_user@reliefmatch.ai")
-      navigate("/admin")
+      setUserProfile(prev => ({ ...prev, role: role || "admin1" }))
+      
+      if (role === "incharge") {
+        navigate("/incharge/dashboard")
+      } else {
+        navigate("/admin")
+      }
     } catch (error) {
       console.error("Google login error:", error)
       navigate("/admin")

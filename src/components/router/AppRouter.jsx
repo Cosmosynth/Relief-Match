@@ -9,6 +9,12 @@ import { AdminControlCenter } from "../pages/AdminControlCenter"
 import { Requests } from "../pages/Requests"
 import { Supply } from "../pages/Supply"
 import { MatchesDeliveries } from "../pages/MatchesDeliveries"
+import { CampDashboard } from "../pages/incharge/CampDashboard"
+import { CampSupplies } from "../pages/incharge/CampSupplies"
+import { CampRequestSupplies } from "../pages/incharge/CampRequestSupplies"
+import { CampDeliveries } from "../pages/incharge/CampDeliveries"
+import { CampDeliveryDetail } from "../pages/incharge/CampDeliveryDetail"
+import { CampDonations } from "../pages/incharge/CampDonations"
 
 const router = createBrowserRouter([
   {
@@ -26,7 +32,7 @@ const router = createBrowserRouter([
   {
     path: "/admin",
     element: (
-      <ProtectedRoute allowedRoles={["admin1", "admin2", "incharge", "logistics"]}>
+      <ProtectedRoute allowedRoles={["admin1", "admin2", "logistics"]}>
         <Dashboard />
       </ProtectedRoute>
     ),
@@ -34,7 +40,7 @@ const router = createBrowserRouter([
   {
     path: "/admin/requests",
     element: (
-      <ProtectedRoute allowedRoles={["admin1", "admin2", "incharge", "logistics"]}>
+      <ProtectedRoute allowedRoles={["admin1", "admin2", "logistics"]}>
         <Requests />
       </ProtectedRoute>
     ),
@@ -50,7 +56,7 @@ const router = createBrowserRouter([
   {
     path: "/admin/matches",
     element: (
-      <ProtectedRoute allowedRoles={["admin1", "admin2", "incharge", "logistics"]}>
+      <ProtectedRoute allowedRoles={["admin1", "admin2", "logistics"]}>
         <MatchesDeliveries />
       </ProtectedRoute>
     ),
@@ -58,8 +64,65 @@ const router = createBrowserRouter([
   {
     path: "/admin/matches/:id",
     element: (
-      <ProtectedRoute allowedRoles={["admin1", "admin2", "incharge", "logistics"]}>
+      <ProtectedRoute allowedRoles={["admin1", "admin2", "logistics"]}>
         <MatchesDeliveries />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/admin/control-center",
+    element: (
+      <ProtectedRoute allowedRoles={["admin1"]}>
+        <AdminControlCenter />
+      </ProtectedRoute>
+    ),
+  },
+  // ─── Camp In-Charge Routes ───
+  {
+    path: "/incharge/dashboard",
+    element: (
+      <ProtectedRoute allowedRoles={["incharge"]}>
+        <CampDashboard />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/incharge/supplies",
+    element: (
+      <ProtectedRoute allowedRoles={["incharge"]}>
+        <CampSupplies />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/incharge/request",
+    element: (
+      <ProtectedRoute allowedRoles={["incharge"]}>
+        <CampRequestSupplies />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/incharge/deliveries",
+    element: (
+      <ProtectedRoute allowedRoles={["incharge"]}>
+        <CampDeliveries />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/incharge/deliveries/:id",
+    element: (
+      <ProtectedRoute allowedRoles={["incharge"]}>
+        <CampDeliveryDetail />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/incharge/donations",
+    element: (
+      <ProtectedRoute allowedRoles={["incharge"]}>
+        <CampDonations />
       </ProtectedRoute>
     ),
   },

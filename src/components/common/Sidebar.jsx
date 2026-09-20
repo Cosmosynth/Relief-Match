@@ -14,7 +14,7 @@ export const Sidebar = () => {
     navigate("/login")
   }
 
-  const allNavItems = [
+  const adminNavItems = [
     { name: "Command Center", path: "/admin", icon: "dashboard" },
     { name: "Requests", path: "/admin/requests", icon: "assignment" },
     { name: "Supply", path: "/admin/supply", icon: "inventory_2" },
@@ -22,11 +22,21 @@ export const Sidebar = () => {
     { name: "Control Center", path: "/admin/control-center", icon: "admin_panel_settings" },
   ]
 
+  const inchargeNavItems = [
+    { name: "Dashboard", path: "/incharge/dashboard", icon: "dashboard" },
+    { name: "Supplies", path: "/incharge/supplies", icon: "inventory_2" },
+    { name: "Request Supplies", path: "/incharge/request", icon: "post_add" },
+    { name: "Deliveries", path: "/incharge/deliveries", icon: "local_shipping" },
+    { name: "Public Donations", path: "/incharge/donations", icon: "volunteer_activism" },
+  ]
+
   // Filter nav items by role
-  const navItems = allNavItems.filter(item => {
-    const allowed = SIDEBAR_ACCESS[item.path]
-    return allowed ? allowed.includes(userRole) : true
-  })
+  const navItems = userRole === "incharge" 
+    ? inchargeNavItems 
+    : adminNavItems.filter(item => {
+        const allowed = SIDEBAR_ACCESS[item.path]
+        return allowed ? allowed.includes(userRole) : true
+      })
 
   const roleInfo = ROLES[userRole] || { label: userRole, icon: "person" }
 
@@ -90,7 +100,7 @@ export const Sidebar = () => {
       {/* Footer Section */}
       <div className="mt-auto px-6 pt-4 border-t border-white/10">
         <button 
-          onClick={() => navigate("/admin")}
+          onClick={() => navigate(userRole === "incharge" ? "/incharge/dashboard" : "/admin")}
           className="w-full bg-[#D98B3A] text-white rounded-lg py-2 px-3 text-xs font-bold uppercase tracking-wider hover:bg-opacity-90 transition-opacity flex items-center justify-center gap-2 mb-3 shadow-sm cursor-pointer"
         >
           <span className="material-symbols-outlined text-[16px]">download</span>

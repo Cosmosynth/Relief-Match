@@ -12,7 +12,7 @@ export const MatchesDeliveries = () => {
   const { userRole, userCampId, currentUser } = useAuth()
   const [matches, setMatches] = useState([])
   const [shipments, setShipments] = useState([])
-  const [activeTab, setActiveTab] = useState("matches")
+  const [activeTab, setActiveTab] = useState(userRole === "logistics" ? "deliveries" : "matches")
 
   useEffect(() => {
     const mFilters = userRole === "incharge" && userCampId ? { campId: userCampId } : {}
@@ -71,16 +71,23 @@ export const MatchesDeliveries = () => {
         <Header title="Matches & Deliveries" />
         <main className="flex-1 overflow-y-auto p-6 space-y-6">
 
-          {/* Tabs */}
-          <div className="flex border-b border-[#E7DED2] gap-6">
-            <button onClick={() => setActiveTab("matches")}
-              className={`pb-3 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 cursor-pointer ${activeTab === "matches" ? "border-[#D98B3A] text-[#001d36]" : "border-transparent text-[#74777e] hover:text-[#001d36]"}`}>
-              Matches ({matches.length})
-            </button>
-            <button onClick={() => setActiveTab("deliveries")}
-              className={`pb-3 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 cursor-pointer ${activeTab === "deliveries" ? "border-[#D98B3A] text-[#001d36]" : "border-transparent text-[#74777e] hover:text-[#001d36]"}`}>
-              Deliveries ({shipments.length})
-            </button>
+          <div className="flex items-center gap-6 border-b border-[#E7DED2]">
+            <div className="flex gap-6">
+              <button onClick={() => setActiveTab("matches")}
+                className={`pb-3 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 cursor-pointer ${activeTab === "matches" ? "border-[#D98B3A] text-[#001d36]" : "border-transparent text-[#74777e] hover:text-[#001d36]"}`}>
+                Matches ({matches.length})
+              </button>
+              <button onClick={() => setActiveTab("deliveries")}
+                className={`pb-3 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 cursor-pointer ${activeTab === "deliveries" ? "border-[#D98B3A] text-[#001d36]" : "border-transparent text-[#74777e] hover:text-[#001d36]"}`}>
+                Deliveries ({shipments.length})
+              </button>
+            </div>
+            {userRole === "admin2" && (
+              <span className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-bold uppercase tracking-wider mb-1">
+                <span className="material-symbols-outlined text-sm">visibility</span>
+                Read-Only
+              </span>
+            )}
           </div>
 
           {activeTab === "matches" && (
@@ -116,6 +123,9 @@ export const MatchesDeliveries = () => {
                       <button onClick={() => handleAssignTrip(m)} className="bg-[#001d36] text-white px-3 py-1.5 rounded-lg text-xs font-bold uppercase hover:bg-[#17324d] cursor-pointer flex items-center gap-1">
                         <span className="material-symbols-outlined text-sm">local_shipping</span> Assign Trip
                       </button>
+                    )}
+                    {userRole === "admin2" && (
+                      <span className="text-[10px] text-[#74777e] italic">View only — no actions available</span>
                     )}
                   </div>
                 </div>

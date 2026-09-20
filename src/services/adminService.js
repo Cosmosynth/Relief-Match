@@ -68,6 +68,33 @@ export const ROLE_CTA = {
   logistics: { label: "MY TRIPS", icon: "route", action: "myTrips" },
 }
 
+// ─── Map layer visibility per role ────────────────────────────
+
+export const MAP_LAYERS = {
+  admin1:    { camps: true,  supply: true,  trips: true  },
+  admin2:    { camps: true,  supply: true,  trips: false },
+  incharge:  { camps: true,  supply: true,  trips: true  },
+  logistics: { camps: false, supply: false, trips: true  },
+}
+
+// ─── Dashboard filter bar visibility per role ─────────────────
+
+export const DASHBOARD_FILTERS = {
+  admin1:    { item: true,  camp: true,  urgency: true  },
+  admin2:    { item: true,  camp: false, urgency: false },
+  incharge:  { item: true,  camp: false, urgency: true  },
+  logistics: { item: false, camp: false, urgency: false },
+}
+
+// ─── Dashboard side-panel visibility per role ─────────────────
+
+export const DASHBOARD_PANELS = {
+  admin1:    { urgentShortages: true,  activity: true,  stats: true  },
+  admin2:    { urgentShortages: true,  activity: true,  stats: false },
+  incharge:  { urgentShortages: true,  activity: true,  stats: false },
+  logistics: { urgentShortages: false, activity: true,  stats: false },
+}
+
 // ─── User Management (Firestore direct) ────────────────────────
 
 export const fetchUsers = async () => {
