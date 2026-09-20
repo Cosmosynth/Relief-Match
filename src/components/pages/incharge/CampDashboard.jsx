@@ -2,20 +2,31 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sidebar } from '../../common/Sidebar';
 import { Header } from '../../common/Header';
-import { getMockData } from '../../../services/inchargeMockData';
+import { listenToRequests } from '../../../services/requestService';
+import { listenCollection, fetchDoc } from '../../../services/firestoreService';
 
 export const CampDashboard = () => {
   const navigate = useNavigate();
-  const [data, setData] = useState(null);
+  const campId = "CAMP-001"; // Currently hardcoded for the demo as inchargeMockData was
+  
+  const [camp, setCamp] = useState(null);
+  const [supplies, setSupplies] = useState([]);
+  const [requests, setRequests] = useState([]);
 
   useEffect(() => {
-    // Fetch mock data
-    setData(getMockData());
+    // Fetch real-time data from static services
+    fetchDoc("camps", campId).then(setCamp);
+    
+    const unsubSupplies = listenCollection("supplies", setSupplies, [{ field: "campId", op: "==", value: campId }]);
+    const unsubRequests = listenToRequests(setRequests, { campId });
+
+    return () => {
+      unsubSupplies();
+      unsubRequests();
+    };
   }, []);
 
-  if (!data) return null;
-
-  const { camp, supplies, requests } = data;
+  if (!camp) return null;
 
   // Calculate KPIs
   const totalSupplyItems = supplies.reduce((acc, curr) => acc + curr.qty, 0);
@@ -105,7 +116,7 @@ export const CampDashboard = () => {
                         <span className="text-[10px] font-bold text-green-800 uppercase tracking-wider bg-green-100 px-2 py-0.5 rounded-full">{r.status}</span>
                       </div>
                       <div className="text-xs text-[#1c1c18] font-medium line-clamp-1 mb-1">
-                        {r.items.map(i => `${i.qty} ${i.unit} ${i.name}`).join(", ")}
+                        {r.qtyRequested} {r.itemKey?.replace(/_/g, " ")}
                       </div>
                       <div className="text-[10px] text-[#74777e] flex items-center gap-1">
                         <span className="material-symbols-outlined text-[12px]">schedule</span>
@@ -138,8 +149,8 @@ export const CampDashboard = () => {
                           r.status === 'Delivered' ? 'bg-gray-100 text-gray-600' : 'bg-blue-100 text-blue-800'
                         }`}>{r.status}</span>
                       </div>
-                      <div className="text-xs text-[#1c1c18] truncate">
-                        {r.items.map(i => i.name).join(", ")}
+                      <div className="text-xs text-[#1c1c18] truncate capitalize">
+                        {r.itemKey?.replace(/_/g, " ")}
                       </div>
                       <div className="text-[10px] text-[#74777e]">
                         Required by: {new Date(r.requiredBy).toLocaleDateString()}

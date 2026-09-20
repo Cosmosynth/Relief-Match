@@ -1,18 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from '../../common/Sidebar';
 import { Header } from '../../common/Header';
-import { getMockData } from '../../../services/inchargeMockData';
+import { listenCollection } from '../../../services/firestoreService';
 
 export const CampDonations = () => {
-  const [data, setData] = useState(null);
+  const [donations, setDonations] = useState([]);
+  const [needs, setNeeds] = useState([]);
 
   useEffect(() => {
-    setData(getMockData());
+    const unsubD = listenCollection("donations", setDonations);
+    const unsubN = listenCollection("needs", setNeeds);
+    return () => { unsubD(); unsubN(); };
   }, []);
-
-  if (!data) return null;
-
-  const { donations, needs } = data;
 
   const totalDonations = donations.reduce((sum, d) => sum + d.amount, 0);
 

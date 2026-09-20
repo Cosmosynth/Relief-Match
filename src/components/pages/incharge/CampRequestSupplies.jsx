@@ -2,9 +2,12 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sidebar } from '../../common/Sidebar';
 import { Header } from '../../common/Header';
+import { submitRequest } from '../../../services/requestService';
 
 export const CampRequestSupplies = () => {
   const navigate = useNavigate();
+  const campId = "CAMP-001"; // Hardcoded for demo
+
   const [items, setItems] = useState([{ name: "", qty: "", unit: "Litres" }]);
   const [priority, setPriority] = useState("Medium");
   const [requiredBy, setRequiredBy] = useState("");
@@ -12,6 +15,7 @@ export const CampRequestSupplies = () => {
   const [photos, setPhotos] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showToast, setShowToast] = useState(false);
+  const [submittedId, setSubmittedId] = useState("");
 
   const addItem = () => {
     setItems([...items, { name: "", qty: "", unit: "Litres" }]);
@@ -29,12 +33,25 @@ export const CampRequestSupplies = () => {
     setItems(newItems);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Mock submission delay
-    setTimeout(() => {
+    try {
+      const id = await submitRequest({
+        campId,
+        items,
+        itemKey: items[0].name.toLowerCase(), // for legacy compatibility
+        qtyRequested: items[0].qty, // for legacy compatibility
+        urgency: priority === "Critical" ? "critical" : priority === "High" ? "high" : "normal",
+        priority,
+        requiredBy,
+        instructions,
+        notes: instructions, // for legacy compatibility
+        photos
+      }, "mock-incharge-uid");
+      
+      setSubmittedId(id);
       setIsSubmitting(false);
       setShowToast(true);
       
@@ -43,7 +60,10 @@ export const CampRequestSupplies = () => {
         setShowToast(false);
         navigate("/incharge/dashboard");
       }, 2000);
-    }, 1000);
+    } catch (err) {
+      console.error(err);
+      setIsSubmitting(false);
+    }
   };
 
   const commonUnits = ["Litres", "Kg", "Pieces", "Kits", "Boxes", "Units"];
@@ -207,7 +227,7 @@ export const CampRequestSupplies = () => {
           <span className="material-symbols-outlined text-green-400">check_circle</span>
           <div>
             <div className="font-bold text-sm">Request Submitted</div>
-            <div className="text-[10px] text-white/70">Request ID: REQ-{Math.floor(Math.random() * 9000) + 1000} created successfully.</div>
+            <div className="text-[10px] text-white/70">Request ID: {submittedId} created successfully.</div>
           </div>
         </div>
       )}

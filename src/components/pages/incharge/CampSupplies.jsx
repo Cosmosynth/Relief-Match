@@ -1,18 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from '../../common/Sidebar';
 import { Header } from '../../common/Header';
-import { getMockData } from '../../../services/inchargeMockData';
+import { listenCollection } from '../../../services/firestoreService';
 
 export const CampSupplies = () => {
-  const [data, setData] = useState(null);
+  const [supplies, setSupplies] = useState([]);
+  const campId = "CAMP-001";
 
   useEffect(() => {
-    setData(getMockData());
+    const unsub = listenCollection("supplies", setSupplies, [{ field: "campId", op: "==", value: campId }]);
+    return () => unsub();
   }, []);
-
-  if (!data) return null;
-
-  const { supplies } = data;
 
   return (
     <div className="bg-[#F7F3EC] text-[#1c1c18] font-sans flex h-screen overflow-hidden antialiased">

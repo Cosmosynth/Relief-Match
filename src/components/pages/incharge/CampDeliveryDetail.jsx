@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Sidebar } from '../../common/Sidebar';
 import { Header } from '../../common/Header';
-import { getMockData, mockCamp } from '../../../services/inchargeMockData';
+import { listenToRequests } from '../../../services/requestService';
+import { fetchDoc } from '../../../services/firestoreService';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 
@@ -25,17 +26,21 @@ const sourceIcon = createIcon('#16a34a', 'inventory_2');
 export const CampDeliveryDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [data, setData] = useState(null);
+  const [request, setRequest] = useState(null);
+  const [camp, setCamp] = useState(null);
 
   useEffect(() => {
-    setData(getMockData());
-  }, []);
+    fetchDoc("camps", "CAMP-001").then(setCamp);
+    const unsub = listenToRequests((reqs) => {
+      const found = reqs.find(r => r.id === id);
+      setRequest(found || null);
+    }, {});
+    return () => unsub();
+  }, [id]);
 
-  if (!data) return null;
+  // removed data parsing
 
-  const request = data.requests.find(r => r.id === id);
-
-  if (!request) {
+  if (!request || !camp) {
     return (
       <div className="bg-[#F7F3EC] flex h-screen overflow-hidden">
         <Sidebar />
@@ -119,12 +124,10 @@ export const CampDeliveryDetail = () => {
                   <div>
                     <div className="text-[10px] font-bold text-[#74777e] uppercase tracking-wider mb-1">Requested Items</div>
                     <ul className="space-y-2">
-                      {request.items.map((i, idx) => (
-                        <li key={idx} className="flex justify-between items-center text-sm border border-[#E7DED2] rounded p-2 bg-[#F7F3EC]/50">
-                          <span className="font-medium text-[#001d36]">{i.name}</span>
-                          <span className="font-mono font-bold text-[#D98B3A]">{i.qty} <span className="text-[10px]">{i.unit}</span></span>
-                        </li>
-                      ))}
+                      <li className="flex justify-between items-center text-sm border border-[#E7DED2] rounded p-2 bg-[#F7F3EC]/50">
+                        <span className="font-medium text-[#001d36] capitalize">{request.itemKey?.replace(/_/g, " ")}</span>
+                        <span className="font-mono font-bold text-[#D98B3A]">{request.qtyRequested}</span>
+                      </li>
                     </ul>
                   </div>
                   
@@ -215,7 +218,7 @@ export const CampDeliveryDetail = () => {
                         <Popup>Source Location</Popup>
                       </Marker>
                       <Marker position={[request.route.dest.lat, request.route.dest.lng]} icon={campIcon}>
-                        <Popup>Destination: {mockCamp.name}</Popup>
+                        <Popup>Destination: {camp.name}</Popup>
                       </Marker>
                       <Marker position={[request.driverLocation.lat, request.driverLocation.lng]} icon={truckIcon}>
                         <Popup>Logistics Vehicle<br/>{request.driver?.vehicle}</Popup>

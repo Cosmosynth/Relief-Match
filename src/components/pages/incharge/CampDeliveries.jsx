@@ -2,21 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sidebar } from '../../common/Sidebar';
 import { Header } from '../../common/Header';
-import { getMockData } from '../../../services/inchargeMockData';
+import { listenToRequests } from '../../../services/requestService';
 
 export const CampDeliveries = () => {
   const navigate = useNavigate();
-  const [data, setData] = useState(null);
+  const campId = "CAMP-001"; // Hardcoded for demo
+  
+  const [requests, setRequests] = useState([]);
   const [activeFilter, setActiveFilter] = useState("All");
 
   useEffect(() => {
-    setData(getMockData());
+    const unsub = listenToRequests(setRequests, { campId });
+    return () => unsub();
   }, []);
 
-  if (!data) return null;
-
-  const { requests } = data;
-  const filters = ["All", "Pending", "Accepted", "Preparing", "In Transit", "Delivered"];
+  const filters = ["All", "submitted", "verified", "in_transit", "delivered", "rejected"];
 
   const filteredRequests = activeFilter === "All" 
     ? requests 
@@ -25,12 +25,12 @@ export const CampDeliveries = () => {
   // Helper for status colors
   const getStatusStyle = (status) => {
     switch(status) {
-      case "Pending": return "bg-gray-100 text-gray-800 border-gray-200";
-      case "Accepted": return "bg-blue-100 text-blue-800 border-blue-200";
-      case "Preparing": return "bg-purple-100 text-purple-800 border-purple-200";
-      case "Dispatched":
-      case "In Transit": return "bg-orange-100 text-orange-800 border-orange-200";
-      case "Delivered": return "bg-green-100 text-green-800 border-green-200";
+      case "submitted": return "bg-gray-100 text-gray-800 border-gray-200";
+      case "verified": return "bg-blue-100 text-blue-800 border-blue-200";
+      case "matched": return "bg-purple-100 text-purple-800 border-purple-200";
+      case "in_transit": return "bg-orange-100 text-orange-800 border-orange-200";
+      case "delivered": return "bg-green-100 text-green-800 border-green-200";
+      case "rejected": return "bg-red-100 text-red-800 border-red-200";
       default: return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
@@ -76,15 +76,12 @@ export const CampDeliveries = () => {
                 
                 <div className="flex-1 space-y-4">
                   <div>
-                    <div className="text-[10px] font-bold text-[#74777e] uppercase tracking-wider mb-1">Requested Items</div>
+                    <div className="text-[10px] font-bold text-[#74777e] uppercase tracking-wider mb-1">Requested Item</div>
                     <div className="text-sm font-medium text-[#1c1c18] flex flex-wrap gap-x-3 gap-y-1">
-                      {r.items.map((i, idx) => (
-                        <span key={idx} className="flex items-center gap-1">
-                          <span className="font-mono text-[#D98B3A]">{i.qty}</span>
-                          <span className="text-[#74777e] text-[10px]">{i.unit}</span>
-                          <span>{i.name}</span>
+                        <span className="flex items-center gap-1">
+                          <span className="font-mono text-[#D98B3A]">{r.qtyRequested}</span>
+                          <span className="capitalize">{r.itemKey?.replace(/_/g, " ")}</span>
                         </span>
-                      ))}
                     </div>
                   </div>
                   
